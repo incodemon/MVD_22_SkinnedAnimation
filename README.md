@@ -1,2 +1,2 @@
 ### La Salle - Universitat Ramon Llull : Master in Advanced Videogame Development
-## Advanced Graphics 1 - 21-SkinnedAnimation
+## Advanced Graphics 1 - 22-SkinnedAnimation
