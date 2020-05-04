@@ -67,4 +67,15 @@ void AnimationSystem::update(float dt) {
         }
     }
 
+
+    auto& skinnedmeshes = ECS.getAllComponents<SkinnedMesh>();
+
+    for (auto& sm : skinnedmeshes) {
+        if (!sm.root) continue;
+        if (trigger_frame) {
+            incrementJointFrame_(sm.root);
+
+        }
+
+    }
 }

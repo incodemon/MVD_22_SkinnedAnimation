@@ -124,7 +124,11 @@ void GraphicsSystem::update(float dt) {
     }
     
     //Render skinned meshes here!
-    
+    for (auto &skinnedmesh : ECS.getAllComponents<SkinnedMesh>()) {
+       
+        checkShaderAndMaterial_(skinnedmesh);
+        renderSkinnedMeshComponent_(skinnedmesh);
+    }
     /* ENVIRONMENT */
     renderEnvironment_();
     
@@ -338,11 +342,52 @@ void GraphicsSystem::getJointMatrices(Joint* current,
                       std::vector<float>& bind_matrices,
                       int& joint_count) {
     
+    lm::mat4 joint_global_model = current_model * current->matrix;
+    lm::mat4 joint_global_bind = current->bind_pose_matrix;
+
+    for (int i = 0; i < 16; i++) {
+        //copy the matrices above into the correct position
+        //in pos_matrices and bind_matrices
+        pos_matrices[joint_count * 16 + i] = joint_global_model.m[i];
+        bind_matrices[joint_count * 16 + i] = joint_global_bind.m[i];
+    }
+
+    //recursion
+    for (auto& c : current->children) {
+        joint_count++;
+        getJointMatrices(c, joint_global_model, pos_matrices, bind_matrices, joint_count);
+    }
 }
 
 void GraphicsSystem::renderSkinnedMeshComponent_(SkinnedMesh& comp) {
     
+    //upload uniforms related to animation here
+    Camera& cam = ECS.getComponentInArray<Camera>(ECS.main_camera);
+    shader_->setUniform(U_VP, cam.view_projection);
 
+    //find references to arrays
+    GLint u_joint_pos_matrices = glGetUniformLocation(
+                    shader_->program,
+                    "u_joint_pos_matrices"
+             );
+    GLint u_joint_bind_matrices = glGetUniformLocation(
+                    shader_->program,
+                    "u_joint_bind_matrices"
+        );
+
+    std::vector<float> p_m(comp.num_joints * 16, 0.0);
+    std::vector<float> b_m(comp.num_joints * 16, 0.0);
+    int joint_counter = 0;
+    //call our recursive function to set matrices
+    getJointMatrices(comp.root, lm::mat4(),p_m,b_m,joint_counter);
+    
+    //send to shader
+    glUniformMatrix4fv(u_joint_pos_matrices, comp.num_joints, GL_FALSE, &p_m[0]);
+    glUniformMatrix4fv(u_joint_bind_matrices, comp.num_joints, GL_FALSE, &b_m[0]);
+
+    shader_->setUniform(U_SKIN_BIND_MATRIX, comp.skin_bind_matrix);
+
+    renderMeshComponent_(comp);
 }
 
 //render the skybox as a cubemap

@@ -213,12 +213,52 @@ int Geometry::createPlaneGeometry() {
 
 	return 1;
 }
-
+//both arrays are size of number of vertices in mesh
 int Geometry::addVertexWeights(std::vector<lm::vec4>& vertex_weights,
                                std::vector<lm::ivec4>& vertex_jointids) {
     
+    //hack the vertex_joints_ids into floats to send to shader
+    //because Alun is crap :)
+
+    //create global float arrays with all values
+    //create vector<float> which will be 4 * size of input arrays
+
+    std::vector<float> weights(vertex_weights.size() * 4 , 0.0);
+    std::vector<float> ids(vertex_jointids.size() * 4, 0.0);
+
+    for (int i = 0; i < vertex_weights.size(); i++) {
+        weights[i * 4] = vertex_weights[i].x;
+        weights[i * 4 + 1] = vertex_weights[i].y;
+        weights[i * 4 + 2] = vertex_weights[i].z;
+        weights[i * 4 + 3] = vertex_weights[i].w;
+
+        ids[i * 4] = (float)vertex_jointids[i].x;
+        ids[i * 4 + 1] = (float)vertex_jointids[i].y;
+        ids[i * 4 + 2] = (float)vertex_jointids[i].z;
+        ids[i * 4 + 3] = (float)vertex_jointids[i].w;
+    }
+    //send these arrays to attributes of shader
     
+    //already have a vao
+    glBindVertexArray(vao);
+    GLuint vbo;
+
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, weights.size() * sizeof(float), &(weights[0]), GL_STATIC_DRAW);
     
+
+    glEnableVertexAttribArray(3);
+    glVertexAttribPointer(3,4,GL_FLOAT,GL_FALSE,0,0);
+
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, ids.size() * sizeof(float), &(ids[0]), GL_STATIC_DRAW);
+
+
+    glEnableVertexAttribArray(4);
+    glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, 0, 0);
+
     return 1;
 }
 
